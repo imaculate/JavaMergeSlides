@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Date;
 import java.util.regex.Pattern;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 public class MergeSlides{
     public static void main(String args[]) throws IOException{
@@ -34,6 +35,14 @@ public class MergeSlides{
     public static void mergeSame(String[] args) throws IOException{
     
         String name = args[0];
+        int first = 0;
+        while((first< args.length-1) && name.substring(name.length()-4).equals(".png")){
+         //do nothing
+         first++;
+         name = args[first];
+         
+        }
+        
         String target_path = name.substring(0, name.lastIndexOf('-'));
         File file=new File(target_path);
         String target_dir = file.getParent();
@@ -44,32 +53,55 @@ public class MergeSlides{
         //merging
         List<XSLFSlide> slides = ppt.getSlides();
         
-        int[] order = new int[args.length];
+        List<Integer> order = new ArrayList<Integer>();
+        List<String> images  = new ArrayList<String>();
         
         for(int i = 0; i< args.length; i++){
             name = args[i]; 
-            order[i] = Integer.parseInt(name.substring(1+name.lastIndexOf('-')));
-            System.out.println(order[i]);
+            if(!name.substring(name.length()-4).equals(".png")){
+               order.add(Integer.parseInt(name.substring(1+name.lastIndexOf('-'))));
+               //System.out.println(name);
+            }else{
+               //image
+               name = name+ "-"+i ;
+               images.add(name);
+               
+            }
         }
         int sz = slides.size();
         int[] idc = new int[sz] ;    //new indices after reshuffling
         for(int i = 0; i<sz; i++){
             idc[i]=i;
         }
-        for(int i = order.length-1; i>= 0; i--){
+        for(int i = order.size()-1; i>= 0; i--){
            // System.out.println(order[i]);
             
-            int idx =  order[i];
+            int idx =  order.get(i);
             XSLFSlide selectesdslide = slides.get(idc[idx]);
             ppt.setSlideOrder(selectesdslide, 0);
             for(int j = 0; j<idx; j++){
                 idc[j]+=1;          //shift items to the right
             }
         }
-        int outsize = order.length;
+        int outsize = order.size();
         for(int i = outsize; i< sz; i++){ //remove the excess slides in case order.length< sz
             //System.out.println(i);
             ppt.removeSlide(outsize);
+        }
+        
+        for(int i= 0; i< images.size(); i++){
+               XSLFSlide imageSlide = ppt.createSlide();
+               name = images.get(i);
+               int pos = Integer.parseInt(name.substring(1+name.lastIndexOf('-')));
+               name = name.substring(0,name.lastIndexOf('-'));
+               
+               byte[] pictureData = IOUtils.toByteArray(new FileInputStream(name));
+
+               XSLFPictureData pd = ppt.addPicture(pictureData, XSLFPictureData.PictureType.PNG);
+               XSLFPictureShape pic = imageSlide.createPicture(pd);
+               ppt.setSlideOrder(imageSlide, pos);
+
+
         }
         
         
@@ -130,6 +162,7 @@ public class MergeSlides{
             if(!st.substring(st.length()-4).equals(".png")){
             int idx = st.lastIndexOf('-');
             String finame = st.substring(0,idx) ; //gonna extract , finame contains directory_path too
+            //System.out.println(st);
             int slideNo = Integer.parseInt(st.substring(idx+1));
              
             if(!files.containsKey(finame)){
@@ -139,21 +172,24 @@ public class MergeSlides{
                file = files.get(finame);
              
             }
-             if(i == 1)//same target directory for all the files
-               target_dir = file.getParent();   
-            
+                         
             
             XMLSlideShow ppt = new XMLSlideShow(new FileInputStream(file));
             pptOut.createSlide().importContent(ppt.getSlides().get(slideNo));
            }else{
+               //System.out.println(st);
                XSLFSlide imageSlide = pptOut.createSlide();
+               file = new File(st);
                
-               byte[] pictureData = IOUtils.toByteArray(new FileInputStream(st));
+               byte[] pictureData = IOUtils.toByteArray(new FileInputStream(file));
 
                XSLFPictureData pd = pptOut.addPicture(pictureData, XSLFPictureData.PictureType.PNG);
                XSLFPictureShape pic = imageSlide.createPicture(pd);
               
            }
+           if(i == 0)//same target directory for all the files
+               target_dir = file.getAbsoluteFile().getParent();   
+
             
          }
          
@@ -166,6 +202,8 @@ public class MergeSlides{
         
         
         String fname = "merged-"+ts+".pptx";
+        //System.out.println("Writing to "+ fname);
+        //System.out.println(target_dir);
         File fout = new File(target_dir, fname);
         
 
@@ -179,19 +217,28 @@ public class MergeSlides{
       String prev = pieces[0];
       String curr = "";
       int idxp = prev.lastIndexOf('-');
-      if(idxp < 0) return false;
       int idx = 0;
-      for(int i = 1; i< pieces.length; i++){
+      int imageCount = 0;
+      for(int i = 0; i< pieces.length; i++){
          curr = pieces[i];
+         
          //System.out.println(curr);
          idx = curr.lastIndexOf('-');
-         if(idx<0 || !curr.substring(0, idx).equals(curr.substring(0, idxp))){
+         boolean image = curr.substring(curr.length()-4).equals(".png");
+         if(image){
+            //System.out.println("Image");
+            imageCount++;
+            continue;
+          }
+         if(idxp>= 0 && !curr.substring(0, idx).equals(curr.substring(0, idxp))){
             return false;
          }
          prev = curr;
          idxp = prev.lastIndexOf('-');
          
       }
+      if(imageCount == pieces.length)
+         return false;
       return true;
       
     }
