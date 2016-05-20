@@ -126,38 +126,12 @@ public class MergeSlides{
     }
     
     
-    public static void addLink( XMLSlideShow ppt, String linkst){         
-      //getting the slide master object
-      XSLFSlideMaster slideMaster = ppt.getSlideMasters().get(0);      
-      //select a layout from specified list
-      XSLFSlideLayout slidelayout = slideMaster.getLayout(SlideLayout.TITLE_AND_CONTENT);
-      //XSLFSlideLayout slidelayout = slideMaster.getLayout(SlideLayout.BLANK);    
-      //creating a slide with title and content layout
-      XSLFSlide slide = ppt.createSlide(slidelayout);    
-      //selection of title place holder
-     XSLFTextShape body = slide.getPlaceholder(1);
-      //XSLFTextShape body = slide.createTextBox();
-      //clear the existing text in the slid
-      body.clearText();      
-    //adding new paragraph
-      XSLFTextRun textRun = body.addNewTextParagraph().addNewTextRun();     
-      //setting the text
-      textRun.setText(linkst);	    
-      //creating the hyperlink
-      XSLFHyperlink link = textRun.createHyperlink();     
-      //setting the link address
-      link.setAddress(linkst);
-    }
-    
-
-    
-   
     
     
     public static void mergeSame(String[] args) throws Exception{
     
-        String name = args[0];
-        int first = 0;
+        String name = args[1];
+        int first = 1;
 
         while((first< args.length-1) && (name.indexOf(".ppt")<0) || (name.indexOf(".ppt")>=0 && name.indexOf(':')>=0)){
          //do nothing
@@ -165,11 +139,11 @@ public class MergeSlides{
          name = args[first];
          
         }
-        
-        String target_path = name.substring(0, name.lastIndexOf('-'));
-        File file=new File(target_path);
-        String target_dir = file.getParent();
-        String fname = file.getName();
+         String target_dir = args[0];
+        String fname = name.substring(0, name.lastIndexOf('-'));
+        File file=new File(target_dir, fname);
+       
+       
 
         XMLSlideShow ppt = new XMLSlideShow(new FileInputStream(file));
 
@@ -179,7 +153,7 @@ public class MergeSlides{
         List<Integer> order = new ArrayList<Integer>();
         List<String> media  = new ArrayList<String>();
         
-        for(int i = 0; i< args.length; i++){
+        for(int i = 1; i< args.length; i++){
             name = args[i]; 
             if( name.indexOf(".ppt")>=0 && name.indexOf(":")<0){//neither image nor link ppt
                order.add(Integer.parseInt(name.substring(1+name.lastIndexOf('-'))));
@@ -347,11 +321,11 @@ public class MergeSlides{
       HashMap<String, File> files = new HashMap<String, File>();
          XMLSlideShow pptOut = new XMLSlideShow();
          File file= null;
-         String target_dir = "";
+         String target_dir = args[0];
          
         
          int n = args.length; //number of slides
-         for(int i = 0; i< n; i++){
+         for(int i = 1; i< n; i++){
             //System.out.println(i);
             String st = args[i];
             if(st.indexOf(".ppt")>=0 && st.indexOf(":")<0){
@@ -450,8 +424,7 @@ public class MergeSlides{
               }
               
            }
-           if(i == 0)//same target directory for all the files
-               target_dir = file.getAbsoluteFile().getParent();   
+           
 
             
          }
@@ -482,7 +455,7 @@ public class MergeSlides{
       int idxp = prev.lastIndexOf('-');
       int idx = 0;
       int imageCount = 0;
-      for(int i = 0; i< pieces.length; i++){
+      for(int i = 1; i< pieces.length; i++){//first argument is the directory
          curr = pieces[i];
          
          //System.out.println(curr);
