@@ -325,7 +325,7 @@ public class MergeSlides{
 
     }
     
-    public static void mergeDifferent(String args[]) throws IOException{
+    public static void mergeDifferent(String args[]) throws Exception{
       HashMap<String, File> files = new HashMap<String, File>();
          XMLSlideShow pptOut = new XMLSlideShow();
          File file= null;
@@ -336,7 +336,7 @@ public class MergeSlides{
          for(int i = 0; i< n; i++){
             //System.out.println(i);
             String st = args[i];
-            if(!st.substring(st.length()-4).equals(".png")){
+            if(st.indexOf(".ppt")>=0 && st.indexOf(":")<0){
             int idx = st.lastIndexOf('-');
             String finame = st.substring(0,idx) ; //gonna extract , finame contains directory_path too
             //System.out.println(st);
@@ -353,15 +353,58 @@ public class MergeSlides{
             
             XMLSlideShow ppt = new XMLSlideShow(new FileInputStream(file));
             pptOut.createSlide().importContent(ppt.getSlides().get(slideNo));
-           }else{
+           }else{//image, link or media
+               if(isImage(st)){
                //System.out.println(st);
-               XSLFSlide imageSlide = pptOut.createSlide();
-               file = new File(st);
+                  XSLFSlide imageSlide = pptOut.createSlide();
+                  file = new File(st);
                
-               byte[] pictureData = IOUtils.toByteArray(new FileInputStream(file));
+                  byte[] pictureData = IOUtils.toByteArray(new FileInputStream(file));
 
-               XSLFPictureData pd = pptOut.addPicture(pictureData, XSLFPictureData.PictureType.PNG);
-               XSLFPictureShape pic = imageSlide.createPicture(pd);
+                  XSLFPictureData pd = pptOut.addPicture(pictureData, XSLFPictureData.PictureType.PNG);
+                  XSLFPictureShape pic = imageSlide.createPicture(pd);
+              }else if(isLink(st)){
+                  XSLFSlideMaster slideMaster = pptOut.getSlideMasters().get(0);      
+                     //select a layout from specified list
+                     XSLFSlideLayout slidelayout = slideMaster.getLayout(SlideLayout.TITLE_AND_CONTENT);
+                       //XSLFSlideLayout slidelayout = slideMaster.getLayout(SlideLayout.BLANK);    
+                        //creating a slide with title and content layout
+                     XSLFSlide slide = pptOut.createSlide(slidelayout);    
+                        //selection of title place holder
+                       XSLFTextShape body = slide.getPlaceholder(1);
+                        //XSLFTextShape body = slide.createTextBox();
+                          //clear the existing text in the slid
+                        body.clearText();      
+                           //adding new paragraph
+                        XSLFTextRun textRun = body.addNewTextParagraph().addNewTextRun();     
+                           //setting the text
+                        textRun.setText(st);	    
+                           //creating the hyperlink
+                        XSLFHyperlink link = textRun.createHyperlink();     
+                           //setting the link address
+                        link.setAddress(st);
+
+                  
+              }else if(isMedia(st)){
+              
+                     
+                  PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+st);
+                  PackagePart part = pptOut.getPackage().createPart(partName, "video/mpeg");
+      
+                   OutputStream partOs = part.getOutputStream();
+
+                  FileInputStream fis = new FileInputStream(st);
+                  byte buf[] = new byte[1024];
+                  for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
+                  fis.close();
+                  partOs.close();
+
+                  XSLFSlide slide = pptOut.createSlide();
+                  XSLFPictureShape pv1 = addPreview(pptOut, slide, part, 5, 50, 80);
+                  addVideo(pptOut, slide, part, pv1, 5);
+                  addTimingInfo(slide, pv1);
+                  
+              }
               
            }
            if(i == 0)//same target directory for all the files
