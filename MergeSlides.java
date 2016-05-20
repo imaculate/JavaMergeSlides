@@ -100,8 +100,18 @@ public class MergeSlides{
       
     }
     
-    public static boolean isMedia(String in){
-      String[] exts = { "mp3", "mp4", "avi"};
+     public static boolean isAudio(String in){
+      String[] exts = { "mp3"};
+      for(int i= 0; i< exts.length; i++){
+         if(!isLink(in) && in.indexOf(exts[i])>=0 )
+            return true;
+      }  
+      
+      return false; 
+    }
+    
+    public static boolean isVideo(String in){
+      String[] exts = { "mp4", "avi"};
       for(int i= 0; i< exts.length; i++){
          if(!isLink(in) && in.indexOf(exts[i])>=0 )
             return true;
@@ -141,24 +151,7 @@ public class MergeSlides{
     
 
     
-    /*public static void addVideo( XMLSlideShow pptx , videoFileName){
-    
-      PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+videoFileName);
-        PackagePart part = pptx.getPackage().createPart(partName, "video/mpeg");
-      
-        
-        FileInputStream fis = new FileInputStream(videoFileName);
-        byte buf[] = new byte[1024];
-        for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
-        fis.close();
-
-        XSLFSlide slide1 = pptx.createSlide();
-        XSLFPictureShape pv1 = addPreview(pptx, slide1, part, 5, 50, 80);
-        addVideo(pptx, slide1, part, pv1, 5);
-        addTimingInfo(slide1, pv1);
-
-      
-    }*/
+   
     
     
     public static void mergeSame(String[] args) throws Exception{
@@ -256,7 +249,7 @@ public class MergeSlides{
                   XSLFPictureData pd = ppt.addPicture(pictureData, XSLFPictureData.PictureType.PNG);
                   XSLFPictureShape pic = imageSlide.createPicture(pd);
                   ppt.setSlideOrder(imageSlide, pos);
-               }else if(isMedia(name)){
+               }else if(isVideo(name)){
                   //System.out.println("Playable");
                   
                   PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+name);
@@ -276,6 +269,31 @@ public class MergeSlides{
                   addTimingInfo(slide, pv1);
                   ppt.setSlideOrder(slide, pos);
                   
+               }else if(isAudio(name)){
+                    
+                  PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+name);
+                  PackagePart part = ppt.getPackage().createPart(partName, "audio/mpeg");
+      
+                   OutputStream partOs = part.getOutputStream();
+
+                  FileInputStream fis = new FileInputStream(name);
+                  byte buf[] = new byte[1024];
+                  for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
+                  fis.close();
+                  partOs.close();
+
+                  XSLFSlide slide = ppt.createSlide();
+                  
+                  byte[] picture = IOUtils.toByteArray(new FileInputStream("audio.png"));
+      
+                  //adding the image to the presentation
+                  XSLFPictureData idx = ppt.addPicture(picture, XSLFPictureData.PictureType.PNG);
+      
+            //creating a slide with given picture on it
+                  XSLFPictureShape pv1 = slide.createPicture(idx);
+                   addAudio(ppt, slide, part, pv1, 5);
+                  addTimingInfo(slide, pv1);
+                  ppt.setSlideOrder(slide, pos);
                }
 
 
@@ -385,7 +403,7 @@ public class MergeSlides{
                         link.setAddress(st);
 
                   
-              }else if(isMedia(st)){
+              }else if(isVideo(st)){
               
                      
                   PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+st);
@@ -404,6 +422,31 @@ public class MergeSlides{
                   addVideo(pptOut, slide, part, pv1, 5);
                   addTimingInfo(slide, pv1);
                   
+              }else if(isAudio(st)){
+              
+               PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+st);
+               PackagePart part = pptOut.getPackage().createPart(partName, "audio/mpeg");
+               OutputStream partOs = part.getOutputStream();
+        //InputStream fis = video.openStream();
+               FileInputStream fis = new FileInputStream(st);
+                byte buf[] = new byte[1024];
+                 for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
+               fis.close();
+               partOs.close();
+
+               XSLFSlide slide = pptOut.createSlide();
+        
+               byte[] picture = IOUtils.toByteArray(new FileInputStream("audio.png"));
+      
+      //adding the image to the presentation
+               XSLFPictureData idx = pptOut.addPicture(picture, XSLFPictureData.PictureType.PNG);
+      
+      //creating a slide with given picture on it
+             XSLFPictureShape pv1 = slide.createPicture(idx);
+      
+               addAudio(pptOut, slide, part, pv1, 5);
+               addTimingInfo(slide, pv1);
+
               }
               
            }
@@ -512,6 +555,35 @@ public class MergeSlides{
         return pic1;
     }
 
+     
+    static void addAudio(XMLSlideShow pptx, XSLFSlide slide1, PackagePart videoPart, XSLFPictureShape pic1, double seconds) throws IOException {
+
+        // add video shape
+        PackagePartName partName = videoPart.getPartName();
+        PackageRelationship prsEmbed1 = slide1.getPackagePart().addRelationship(partName, TargetMode.INTERNAL, "http://schemas.microsoft.com/office/2007/relationships/media");
+        PackageRelationship prsExec1 = slide1.getPackagePart().addRelationship(partName, TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio");
+        CTPicture xpic1 = (CTPicture)pic1.getXmlObject();
+        CTHyperlink link1 = xpic1.getNvPicPr().getCNvPr().addNewHlinkClick();
+        link1.setId("");
+        link1.setAction("ppaction://media");
+
+        // add video relation
+        CTApplicationNonVisualDrawingProps nvPr = xpic1.getNvPicPr().getNvPr();
+        nvPr.addNewVideoFile().setLink(prsExec1.getId());
+        CTExtension ext = nvPr.addNewExtLst().addNewExt();
+        // see http://msdn.microsoft.com/en-us/library/dd950140(v=office.12).aspx
+        ext.setUri("{DAA4B4D4-6D71-4841-9C94-3DE7FCFB9230}");
+        String p14Ns = "http://schemas.microsoft.com/office/powerpoint/2010/main";
+        XmlCursor cur = ext.newCursor();
+        cur.toEndToken();
+        cur.beginElement(new QName(p14Ns, "media", "p14"));
+        cur.insertNamespace("p14", p14Ns);
+        cur.insertAttributeWithValue(new QName(STRelationshipId.type.getName().getNamespaceURI(), "embed"), prsEmbed1.getId());
+        cur.beginElement(new QName(p14Ns, "trim", "p14"));
+        cur.insertAttributeWithValue("st", df_time.format(seconds*1000.0));
+        cur.dispose();
+
+    }
     static void addVideo(XMLSlideShow pptx, XSLFSlide slide1, PackagePart videoPart, XSLFPictureShape pic1, double seconds) throws IOException {
 
         // add video shape

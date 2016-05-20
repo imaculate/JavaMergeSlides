@@ -95,26 +95,36 @@ public class AddAudioToPptx {
         XMLSlideShow pptx = new XMLSlideShow();
 
         // add video file
-        String videoFileName = video.getPath().substring(video.getPath().lastIndexOf('/')+1);
+        String videoFileName = "lego_edsheeran.mp3";
         PackagePartName partName = PackagingURIHelper.createPartName("/ppt/media/"+videoFileName);
-        PackagePart part = pptx.getPackage().createPart(partName, "video/mpeg");
+        PackagePart part = pptx.getPackage().createPart(partName, "audio/mpeg");
         OutputStream partOs = part.getOutputStream();
         //InputStream fis = video.openStream();
-        FileInputStream fis = new FileInputStream("Lea Michele - Cannonball.mp4");
+        FileInputStream fis = new FileInputStream(videoFileName);
         byte buf[] = new byte[1024];
         for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
         fis.close();
         partOs.close();
 
         XSLFSlide slide1 = pptx.createSlide();
-        XSLFPictureShape pv1 = addPreview(pptx, slide1, part, 5, 50, 80);
-        addVideo(pptx, slide1, part, pv1, 5);
+        
+         byte[] picture = IOUtils.toByteArray(new FileInputStream("audio.png"));
+      
+      //adding the image to the presentation
+          XSLFPictureData idx = pptx.addPicture(picture, XSLFPictureData.PictureType.PNG);
+      
+      //creating a slide with given picture on it
+      XSLFPictureShape pv1 = slide1.createPicture(idx);
+      
+
+        //XSLFPictureShape pv1 = // addPreview(pptx, slide1, part, 5, 50, 80);
+        addAudio(pptx, slide1, part, pv1, 5);
         addTimingInfo(slide1, pv1);
         //XSLFPictureShape pv2 = addPreview(pptx, slide1, part, 9, 50, 250);
         //addVideo(pptx, slide1, part, pv2, 9);
         //addTimingInfo(slide1, pv2);
 
-        FileOutputStream fos = new FileOutputStream("pptx-with-video.pptx");
+        FileOutputStream fos = new FileOutputStream("pptx-with-audio.pptx");
         pptx.write(fos);
         fos.close();
         
@@ -152,12 +162,12 @@ public class AddAudioToPptx {
         return pic1;
     }
 
-    static void addVideo(XMLSlideShow pptx, XSLFSlide slide1, PackagePart videoPart, XSLFPictureShape pic1, double seconds) throws IOException {
+    static void addAudio(XMLSlideShow pptx, XSLFSlide slide1, PackagePart videoPart, XSLFPictureShape pic1, double seconds) throws IOException {
 
         // add video shape
         PackagePartName partName = videoPart.getPartName();
         PackageRelationship prsEmbed1 = slide1.getPackagePart().addRelationship(partName, TargetMode.INTERNAL, "http://schemas.microsoft.com/office/2007/relationships/media");
-        PackageRelationship prsExec1 = slide1.getPackagePart().addRelationship(partName, TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/video");
+        PackageRelationship prsExec1 = slide1.getPackagePart().addRelationship(partName, TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio");
         CTPicture xpic1 = (CTPicture)pic1.getXmlObject();
         CTHyperlink link1 = xpic1.getNvPicPr().getCNvPr().addNewHlinkClick();
         link1.setId("");
