@@ -473,7 +473,7 @@ public class MergeSlides{
          idxp = prev.lastIndexOf('-');
          
       }
-      if(imageCount == pieces.length)
+      if(imageCount == pieces.length-1)
          return false;
       return true;
       
