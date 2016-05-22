@@ -36,6 +36,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 
 import javax.imageio.ImageIO;
@@ -78,11 +79,11 @@ public class MergeSlides{
     public static void main(String args[]) throws Exception{
     
          if(isOneFile(args)){
-            //System.out.println("One file");
+            System.out.println("One file");
             mergeSame(args);
             
          }else{
-            //System.out.println("Different files");
+            System.out.println("Different files");
             mergeDifferent(args);
          }
          
@@ -212,13 +213,16 @@ public class MergeSlides{
                            //creating the hyperlink
                         XSLFHyperlink link = textRun.createHyperlink();     
                            //setting the link address
-                        link.setAddress(name);
-                        
+                          try{
+                            link.setAddress(name);
+                        }catch(Exception e){
+                           System.out.println("Invalid URL");
+                        }                        
                         ppt.setSlideOrder(slide, pos);
                }else if(isImage(name)){
                   
               
-                  byte[] pictureData = IOUtils.toByteArray(new FileInputStream(name));
+                  byte[] pictureData = IOUtils.toByteArray(new FileInputStream(new File(target_dir,name)));
 
                   XSLFPictureData pd = ppt.addPicture(pictureData, XSLFPictureData.PictureType.PNG);
                   XSLFPictureShape pic = imageSlide.createPicture(pd);
@@ -250,7 +254,7 @@ public class MergeSlides{
       
                    OutputStream partOs = part.getOutputStream();
 
-                  FileInputStream fis = new FileInputStream(name);
+                  FileInputStream fis = new FileInputStream(new File(target_dir,name));
                   byte buf[] = new byte[1024];
                   for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
                   fis.close();
@@ -335,7 +339,7 @@ public class MergeSlides{
             int slideNo = Integer.parseInt(st.substring(idx+1));
              
             if(!files.containsKey(finame)){
-               file = new File(finame);  
+               file = new File(target_dir,finame);  
                files.put(finame, file);             
             }else{
                file = files.get(finame);
@@ -349,7 +353,7 @@ public class MergeSlides{
                if(isImage(st)){
                //System.out.println(st);
                   XSLFSlide imageSlide = pptOut.createSlide();
-                  file = new File(st);
+                  file = new File(target_dir,st);
                
                   byte[] pictureData = IOUtils.toByteArray(new FileInputStream(file));
 
@@ -374,7 +378,11 @@ public class MergeSlides{
                            //creating the hyperlink
                         XSLFHyperlink link = textRun.createHyperlink();     
                            //setting the link address
-                        link.setAddress(st);
+                        try{
+                            link.setAddress(st);
+                        }catch(Exception e){
+                           System.out.println("Invalid URL");
+                        }
 
                   
               }else if(isVideo(st)){
@@ -385,7 +393,7 @@ public class MergeSlides{
       
                    OutputStream partOs = part.getOutputStream();
 
-                  FileInputStream fis = new FileInputStream(st);
+                  FileInputStream fis = new FileInputStream(new File(target_dir,st));
                   byte buf[] = new byte[1024];
                   for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
                   fis.close();
@@ -402,7 +410,7 @@ public class MergeSlides{
                PackagePart part = pptOut.getPackage().createPart(partName, "audio/mpeg");
                OutputStream partOs = part.getOutputStream();
         //InputStream fis = video.openStream();
-               FileInputStream fis = new FileInputStream(st);
+               FileInputStream fis = new FileInputStream(new File(target_dir,st));
                 byte buf[] = new byte[1024];
                  for (int readBytes; (readBytes = fis.read(buf)) != -1; partOs.write(buf, 0, readBytes));
                fis.close();
@@ -460,7 +468,7 @@ public class MergeSlides{
          
          //System.out.println(curr);
          idx = curr.lastIndexOf('-');
-         boolean image = (curr.indexOf(".ppt")<0) || (curr.indexOf(".ppt")>=0 && curr.indexOf(':')>=0) ;//ie not pptx 
+         boolean image = isAudio(curr) || isVideo(curr) || isLink(curr) ;//ie not pptx 
          if(image){
             //System.out.println("Image");
             imageCount++;
